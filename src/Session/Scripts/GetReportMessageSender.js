@@ -52,10 +52,22 @@ const GetPresenceField = (sessionXPResults) => {
 };
 
 // EXAMPLE: "- @user: +20 XP - (100/250) :emoji:"
+// Sorted from highest XP gained to lowest
 const GetProgressionField = (sessionXPResults) => {
+	const GetSortedGainList = () => {
+		const sortedArray = [...sessionXPResults].sort((a, b) => {
+			return b[1].Gain - a[1].Gain;
+		});
+
+		const sortedMap = new Map(sortedArray);
+
+		return sortedMap;
+	};
+
+	const sortedXPResults = GetSortedGainList();
 	let progressionField = "";
 
-	for (const [studentUserID, results] of sessionXPResults.entries()) {
+	for (const [studentUserID, results] of sortedXPResults.entries()) {
 		const rankIndex = GetRankIndexFromXP(results.Total);
 		const rankProgress = GetRankXPProgress(results.Total);
 		const requirementOfNextRank = RankEnum.XPRequirement.at(rankIndex + 1) || "MAX";
