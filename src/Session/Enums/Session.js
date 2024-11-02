@@ -22,8 +22,8 @@ module.exports = {
 	},
 
 	Reward: {
-		reabilitacao: 60,
-		"side-quest": 30,
+		reabilitacao: 75,
+		"side-quest": 50,
 		congregacao: 128,
 	},
 };

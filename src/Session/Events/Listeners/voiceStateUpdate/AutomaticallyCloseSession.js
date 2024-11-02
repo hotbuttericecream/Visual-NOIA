@@ -7,7 +7,7 @@ const CloseSession = require("../../../Scripts/CloseSession");
 
 ///
 
-const SECONDS_BEFORE_AUTO_EXPIRE = 600;
+const SECONDS_BEFORE_AUTO_EXPIRE = 300;
 const voiceChannelTimeouts = new Map();
 
 module.exports = async (client, oldState, newState) => {
@@ -53,8 +53,10 @@ module.exports = async (client, oldState, newState) => {
 
 	//
 
-	const session = await SessionSchema.findOne({
-		GuildID: oldState.guild.id,
+	const guildID = oldState.guild.id
+
+	let session = await SessionSchema.findOne({
+		GuildID: guildID,
 		VoiceChannelID: voiceChatID,
 	});
 
@@ -63,7 +65,15 @@ module.exports = async (client, oldState, newState) => {
 	//
 
 	const SetCloseTimeout = () => {
-		const Clear = () => {
+		const Clear = async () => {
+			// Might've been closed manually before the timer ran out
+			session = await SessionSchema.findOne({
+				GuildID: guildID,
+				VoiceChannelID: voiceChatID,
+			});
+		
+			if (!session) return;
+
 			CloseSession(client, session);
 			voiceChannelTimeouts.delete(voiceChatID);
 		};
