@@ -53,7 +53,7 @@ module.exports = async (client, oldState, newState) => {
 
 	//
 
-	const guildID = oldState.guild.id
+	const guildID = oldState.guild.id;
 
 	let session = await SessionSchema.findOne({
 		GuildID: guildID,

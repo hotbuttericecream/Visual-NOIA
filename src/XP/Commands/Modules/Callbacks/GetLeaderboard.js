@@ -21,7 +21,7 @@ module.exports = async (client, interaction) => {
 		const callerMember = interaction.member;
 		const callerIndex = xpProfilesInDecrescentOrder.findIndex((element) => element.UserID === callerMember.user.id);
 
-		if (callerIndex == -1) {
+		if (callerIndex === -1) {
 			return `${callerMember.displayName}, você não tem nenhum XP!`;
 		}
 

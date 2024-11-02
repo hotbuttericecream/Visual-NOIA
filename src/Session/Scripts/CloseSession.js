@@ -87,6 +87,16 @@ module.exports = async (client, session) => {
 
 	//
 
+	const GetSessionNumber = () => {
+		if (sessionType === SessionEnum.SessionType.Normal) {
+			return sessionStats.NormalSessionNumber;
+		} else if (sessionType === SessionEnum.SessionType.Detour) {
+			return sessionStats.DetourSessionNumber;
+		} else if (sessionType === SessionEnum.SessionType.Special) {
+			return sessionStats.SpecialSessionNumber;
+		}
+	};
+
 	const PostLeaderboard = async () => {
 		const guild = await client.guilds.fetch(guildID);
 		const [leaderboard] = await GetLeaderboard();
@@ -96,7 +106,7 @@ module.exports = async (client, session) => {
 		const leaderboardChannel = await client.channels.fetch(serverSettings.PostSessionLeaderboardChannelID);
 
 		const sessionDisplayName = SessionEnum.DisplayName[sessionType];
-		const sessionNumber = sessionStats.DetourSessionNumber;
+		const sessionNumber = GetSessionNumber();
 
 		await leaderboardChannel.send({
 			content: `## ${sessionDisplayName} [${sessionNumber}]`,
