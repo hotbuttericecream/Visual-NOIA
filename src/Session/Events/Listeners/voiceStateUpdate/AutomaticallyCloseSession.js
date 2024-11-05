@@ -65,7 +65,7 @@ module.exports = async (client, oldState, newState) => {
 	//
 
 	const SetCloseTimeout = () => {
-		const Clear = async () => {
+		const Clear = () => {
 			voiceChannelTimeouts.delete(voiceChatID);
 			CloseSession(client, session);
 		};
