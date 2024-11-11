@@ -5,6 +5,7 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const Mongoose = require("mongoose");
 const Startup = require("./Core/Scripts/Startup");
+const AppEnum = require("./Core/Enums/App");
 
 ///
 
@@ -18,12 +19,18 @@ const client = new Client({
 	],
 });
 
-(async () => {
-	try {
-		await Mongoose.connect(process.env.MONGODB_URI);
+const URI = AppEnum.IsTest ? process.env.TEST_MONGODB_URI : process.env.MONGODB_URI;
 
-		Startup(client)
+//
+
+const Boot = async () => {
+	try {
+		await Mongoose.connect(URI);
+
+		Startup(client);
 	} catch (error) {
 		console.log(`Database error: ${error}`);
 	}
-})();
+};
+
+Boot();
