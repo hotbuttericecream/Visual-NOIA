@@ -3,5 +3,5 @@
 */
 
 module.exports = {
-	IsTest: true,
+	IsTest: false,
 };

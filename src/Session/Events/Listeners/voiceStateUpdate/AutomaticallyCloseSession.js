@@ -55,7 +55,7 @@ module.exports = async (client, oldState, newState) => {
 
 	const guildID = oldState.guild.id;
 
-	const session = await SessionSchema.findOne({
+	let session = await SessionSchema.findOne({
 		GuildID: guildID,
 		VoiceChannelID: voiceChatID,
 	});
@@ -65,8 +65,17 @@ module.exports = async (client, oldState, newState) => {
 	//
 
 	const SetCloseTimeout = () => {
-		const Clear = () => {
+		const Clear = async () => {
 			voiceChannelTimeouts.delete(voiceChatID);
+
+			// Might've been closed manually before the timer ran out
+			session = await SessionSchema.findOne({
+				GuildID: guildID,
+				VoiceChannelID: voiceChatID,
+			});
+
+			if (!session) return;
+
 			CloseSession(client, session);
 		};
 
