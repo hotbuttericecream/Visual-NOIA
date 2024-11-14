@@ -7,9 +7,9 @@ const SessionSchema = require("../../../Models/Session");
 ///
 
 module.exports = async (client, oldState, newState) => {
-	const hasLeftVoiceChat = newState.channel === null;
+	const voiceChannelJoined = newState.channel;
 
-	if (hasLeftVoiceChat) return;
+	if (voiceChannelJoined === null) return;
 
 	//
 

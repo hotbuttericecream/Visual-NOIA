@@ -6,87 +6,97 @@ const SessionSchema = require("../../../Models/Session");
 
 ///
 
+const GetWorkloads = (session, user) => {
+	let workloads = session.AttendeesWorkloads.get(user.id);
+
+	// This script and 'AttendeeJoin' have a race condition
+	if (!workloads) {
+		workloads = [
+			{
+				JoinTimestamp: Date.now(),
+				LeaveTimestamp: null,
+			},
+		];
+
+		session.AttendeesWorkloads.set(user.id, workloads);
+	}
+
+	return workloads;
+};
+
+const SaveChangesProperly = async (session) => {
+	session.markModified("AttendeesWorkloads");
+	await session.save();
+};
+
 module.exports = async (client, oldState, newState) => {
-	const GetSession = async () => {
-		let session;
+	// Joined a new vc: add a new start timestamp to the session in there
 
-		if (newState.channel !== null) {
-			session = await SessionSchema.findOne({
-				GuildID: newState.guild.id,
-				VoiceChannelID: newState.channel.id,
-			});
-		} else {
-			session = await SessionSchema.findOne({
-				GuildID: oldState.guild.id,
-				VoiceChannelID: oldState.channel.id,
-			});
-		}
+	const voiceChannelJoined = newState.channel;
 
-		return session;
-	};
+	if (voiceChannelJoined !== null) {
+		const guildID = newState.guild.id;
 
-	const session = await GetSession();
+		const session = await SessionSchema.findOne({
+			GuildID: guildID,
+			VoiceChannelID: voiceChannelJoined.id,
+		});
 
-	if (!session) return;
+		if (!session) return;
 
-	//
+		//
 
-	const GetUserWhoJoined = () => {
-		let userWhoJoined;
+		const user = newState.member.user;
 
-		if (newState.channel !== null) {
-			userWhoJoined = newState.member.user;
-		} else {
-			userWhoJoined = oldState.member.user;
-		}
-
-		return userWhoJoined;
-	};
-
-	const userWhoJoined = GetUserWhoJoined();
-
-	//
-
-	const UpdateWorkload = () => {
-		let userWorkloads = session.AttendeesWorkloads.get(userWhoJoined.id);
-
-		// This script and 'AttendeeJoin' have a race condition
-		if (!userWorkloads) {
-			userWorkloads = [
-				{
-					JoinTimestamp: Date.now(),
-					LeaveTimestamp: null,
-				},
-			];
-
-			session.AttendeesWorkloads.set(userWhoJoined.id, userWorkloads);
-		}
-
-		if (newState.channel !== null) {
-			const latestWorkload = userWorkloads.at(-1);
+		const AddStartTimestamp = () => {
+			const workloads = GetWorkloads(session, user);
+			const latestWorkload = workloads.at(-1);
 
 			// Shouldn't be able to create a new workload unless the last one has been finished
 			if (!latestWorkload.LeaveTimestamp) return;
 
-			userWorkloads.push({
+			workloads.push({
 				JoinTimestamp: Date.now(),
 				LeaveTimestamp: null,
 			});
-		} else {
-			const latestWorkload = userWorkloads.at(-1);
+		};
+
+		AddStartTimestamp();
+
+		//
+
+		await SaveChangesProperly(session);
+	}
+
+	// If left a vc: add a leave timestamp to the session there
+
+	const voiceChannelLeft = oldState.channel;
+
+	if (voiceChannelLeft !== null) {
+		const guildID = oldState.guild.id;
+
+		const session = await SessionSchema.findOne({
+			GuildID: guildID,
+			VoiceChannelID: voiceChannelLeft.id,
+		});
+
+		if (!session) return;
+
+		//
+
+		const user = oldState.member.user;
+
+		const AddLeaveTimestamp = () => {
+			const workloads = GetWorkloads(session, user);
+			const latestWorkload = workloads.at(-1);
 
 			latestWorkload.LeaveTimestamp = Date.now();
-		}
-	};
+		};
 
-	UpdateWorkload();
+		AddLeaveTimestamp();
 
-	//
+		//
 
-	const SaveChangesProperly = async () => {
-		session.markModified("AttendeesWorkloads");
-		await session.save();
-	};
-
-	await SaveChangesProperly();
+		await SaveChangesProperly(session);
+	}
 };

@@ -7,80 +7,73 @@ const CloseSession = require("../../../Scripts/CloseSession");
 
 ///
 
-const SECONDS_BEFORE_AUTO_EXPIRE = 10;
+const SECONDS_BEFORE_AUTO_EXPIRE = 300;
 const voiceChannelTimeouts = new Map();
 
 module.exports = async (client, oldState, newState) => {
-	const GetVoiceChatID = () => {
-		let voiceChatID;
+	// Clear timeout on channel that was joined
 
-		if (newState.channel !== null) {
-			voiceChatID = newState.channel.id;
-		} else {
-			voiceChatID = oldState.channel.id;
-		}
+	const voiceChannelJoined = newState.channel;
 
-		return voiceChatID;
-	};
+	// If this is null then the user left the channel
+	if (voiceChannelJoined !== null) {
+		const ClearCloseTimeout = () => {
+			const timeout = voiceChannelTimeouts.get(voiceChannelJoined.id);
 
-	const voiceChatID = GetVoiceChatID();
-
-	//
-
-	const ClearCloseTimeout = () => {
-		const timeout = voiceChannelTimeouts.get(voiceChatID);
-
-		if (timeout) {
-			voiceChannelTimeouts.delete(voiceChatID);
-			clearTimeout(timeout);
-		}
-	};
-
-	if (newState.channel !== null) {
-		ClearCloseTimeout();
-		return;
-	}
-
-	//
-
-	const IsVoiceChatEmpty = () => {
-		const numberOfPeopleInCall = oldState.channel.members.size;
-
-		return numberOfPeopleInCall === 0;
-	};
-
-	if (!IsVoiceChatEmpty()) return;
-
-	//
-
-	const guildID = oldState.guild.id;
-
-	let session = await SessionSchema.findOne({
-		GuildID: guildID,
-		VoiceChannelID: voiceChatID,
-	});
-
-	if (!session) return;
-
-	//
-
-	const SetCloseTimeout = () => {
-		const Clear = async () => {
-			voiceChannelTimeouts.delete(voiceChatID);
-
-			// Might've been closed manually before the timer ran out
-			session = await SessionSchema.findOne({
-				GuildID: guildID,
-				VoiceChannelID: voiceChatID,
-			});
-
-			if (!session) return;
-
-			CloseSession(client, session);
+			if (timeout) {
+				voiceChannelTimeouts.delete(voiceChannelJoined.id);
+				clearTimeout(timeout);
+			}
 		};
 
-		voiceChannelTimeouts.set(voiceChatID, setTimeout(Clear, SECONDS_BEFORE_AUTO_EXPIRE * 1000));
-	};
+		ClearCloseTimeout();
+	}
 
-	SetCloseTimeout();
+	// Start timeout on channel that was left, if it's empty
+
+	const voiceChannelLeft = oldState.channel;
+
+	// If this is null then the user just joined a vc
+	if (voiceChannelLeft !== null) {
+		const IsVoiceChatEmpty = () => {
+			const numberOfPeopleInCall = voiceChannelLeft.members.size;
+
+			return numberOfPeopleInCall === 0;
+		};
+
+		if (!IsVoiceChatEmpty()) return;
+
+		//
+
+		const guildID = oldState.guild.id;
+
+		let session = await SessionSchema.findOne({
+			GuildID: guildID,
+			VoiceChannelID: voiceChannelLeft.id,
+		});
+
+		if (!session) return;
+
+		//
+
+		const SetCloseTimeout = () => {
+			const Clear = async () => {
+				voiceChannelTimeouts.delete(voiceChannelLeft.id);
+
+				// Might've been closed manually before the timer ran out
+				session = await SessionSchema.findOne({
+					GuildID: guildID,
+					VoiceChannelID: voiceChannelLeft.id,
+				});
+
+				if (!session) return;
+
+				CloseSession(client, session);
+			};
+
+			voiceChannelTimeouts.set(voiceChannelLeft.id, setTimeout(Clear, SECONDS_BEFORE_AUTO_EXPIRE * 1000));
+		};
+
+		SetCloseTimeout();
+	}
 };
