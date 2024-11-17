@@ -42,30 +42,28 @@ module.exports = async (client, oldState, newState) => {
 			VoiceChannelID: voiceChannelJoined.id,
 		});
 
-		if (!session) return;
+		if (session) {
+			const user = newState.member.user;
 
-		//
+			const AddStartTimestamp = () => {
+				const workloads = GetWorkloads(session, user);
+				const latestWorkload = workloads.at(-1);
 
-		const user = newState.member.user;
+				// Shouldn't be able to create a new workload unless the last one has been finished
+				if (!latestWorkload.LeaveTimestamp) return;
 
-		const AddStartTimestamp = () => {
-			const workloads = GetWorkloads(session, user);
-			const latestWorkload = workloads.at(-1);
+				workloads.push({
+					JoinTimestamp: Date.now(),
+					LeaveTimestamp: null,
+				});
+			};
 
-			// Shouldn't be able to create a new workload unless the last one has been finished
-			if (!latestWorkload.LeaveTimestamp) return;
+			AddStartTimestamp();
 
-			workloads.push({
-				JoinTimestamp: Date.now(),
-				LeaveTimestamp: null,
-			});
-		};
+			//
 
-		AddStartTimestamp();
-
-		//
-
-		await SaveChangesProperly(session);
+			await SaveChangesProperly(session);
+		}
 	}
 
 	// If left a vc: add a leave timestamp to the session there
@@ -80,23 +78,21 @@ module.exports = async (client, oldState, newState) => {
 			VoiceChannelID: voiceChannelLeft.id,
 		});
 
-		if (!session) return;
+		if (session) {
+			const user = oldState.member.user;
 
-		//
+			const AddLeaveTimestamp = () => {
+				const workloads = GetWorkloads(session, user);
+				const latestWorkload = workloads.at(-1);
 
-		const user = oldState.member.user;
+				latestWorkload.LeaveTimestamp = Date.now();
+			};
 
-		const AddLeaveTimestamp = () => {
-			const workloads = GetWorkloads(session, user);
-			const latestWorkload = workloads.at(-1);
+			AddLeaveTimestamp();
 
-			latestWorkload.LeaveTimestamp = Date.now();
-		};
+			//
 
-		AddLeaveTimestamp();
-
-		//
-
-		await SaveChangesProperly(session);
+			await SaveChangesProperly(session);
+		}
 	}
 };
