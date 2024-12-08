@@ -30,9 +30,15 @@ const SaveChangesProperly = async (session) => {
 };
 
 module.exports = async (client, oldState, newState) => {
-	// Joined a new vc: add a new start timestamp to the session in there
-
+	// variable names are wrong state changes when opening livestream
 	const voiceChannelJoined = newState.channel;
+	const voiceChannelLeft = oldState.channel;
+
+	if (voiceChannelJoined === voiceChannelLeft) {
+		return;
+	}
+
+	// Joined a new vc: add a new start timestamp to the session in there
 
 	if (voiceChannelJoined !== null) {
 		const guildID = newState.guild.id;
@@ -67,8 +73,6 @@ module.exports = async (client, oldState, newState) => {
 	}
 
 	// If left a vc: add a leave timestamp to the session there
-
-	const voiceChannelLeft = oldState.channel;
 
 	if (voiceChannelLeft !== null) {
 		const guildID = oldState.guild.id;
